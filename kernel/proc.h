@@ -1,3 +1,9 @@
+#define SIG_DFL 0 /* default signal handling */
+#define SIG_IGN 1 /* ignore signal */
+#define SIGKILL 9
+#define SIGSTOP 17
+#define SIGCONT 19
+#define NUMOFSIGNALS 32
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -105,4 +111,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  uint32 pendingsignals;        //Represents which signals this process should be handled
+  uint32 signalmask;                  //Represents which signals this process should block generally
+  void* signalhandlers[NUMOFSIGNALS];   //Represents signal handler's data
+
+  struct trapframe* user_trap_frame_backup; //Represents user trap frame backup.
+
+
 };

@@ -238,7 +238,7 @@ userinit(void)
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
-
+  init_siganls_handlers_to_default(p);
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
@@ -246,7 +246,13 @@ userinit(void)
 
   release(&p->lock);
 }
+void init_siganls_handlers_to_default(struct proc *p){ 
 
+    for(int i=0;i<NUMOFSIGNALS;i++){
+      p->signalhandlers[i]=SIG_DFL;
+    }
+
+}
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
 int
@@ -302,7 +308,8 @@ fork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
-
+  np->signalmask =  p->signalmask;
+  copy_signal_handlers(np,p);
   pid = np->pid;
 
   release(&np->lock);
@@ -317,6 +324,26 @@ fork(void)
 
   return pid;
 }
+
+
+int sigaction(int signum,uint64 act,uint64 oldact){
+  struct proc *p = myproc();
+
+  if(act!= 0)
+    {
+      copyin() p
+    }
+  if(oldact!=0)
+  {
+
+  }
+}
+void
+  copy_signal_handlers(  struct proc * np,  struct proc * p){
+    for(int i=0;i<NUMOFSIGNALS;i++){
+      np->signalhandlers[i]=p->signalhandlers[i];
+    }
+  }
 
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock.

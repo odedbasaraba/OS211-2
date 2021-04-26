@@ -23,6 +23,7 @@ void            consoleintr(int);
 void            consputc(int);
 
 // exec.c
+void            make_dfl_signal(struct proc *);
 int             exec(char*, char**);
 
 // file.c
@@ -82,6 +83,8 @@ void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 
 // proc.c
+void            init_siganls_handlers_to_default(struct proc *);
+void            copy_signal_handlers(struct proc *,struct proc *);
 int             cpuid(void);
 void            exit(int);
 int             fork(void);

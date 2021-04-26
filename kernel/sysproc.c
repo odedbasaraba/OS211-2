@@ -16,7 +16,26 @@ sys_exit(void)
   exit(n);
   return 0;  // not reached
 }
-
+uint64
+sys_sigprocmask(void)
+{
+  struct proc *p=myproc();
+  int new_mask;
+  argint(0, &new_mask);
+  uint64 old_mask=p->signalmask;
+  p->signalmask=(uint32)new_mask;
+  return old_mask;
+}
+uint64
+sys_sigaction(void)
+{
+  return 0;
+}
+uint64
+sys_sigret(void)
+{
+  return 0;
+}
 uint64
 sys_getpid(void)
 {
