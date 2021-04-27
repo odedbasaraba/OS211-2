@@ -134,7 +134,7 @@ make_dfl_signal(struct proc *thisisp)
 {
    for(int i=0;i<NUMOFSIGNALS;i++){
       if(thisisp->signalhandlers[i]!=SIG_IGN)
-        thisisp->signalhandlers[i]=SIG_DFL;
+        thisisp->signalhandlers[i]=(void*)SIG_DFL;
     }
 }
 // Load a program segment into pagetable at virtual address va.

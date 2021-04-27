@@ -5,7 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-
+#include "signal.h"
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -138,6 +138,10 @@ found:
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
+
+    //Ass2-2.1.2-1
+  init_siganls_handlers_to_default(p);
+
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
@@ -238,6 +242,8 @@ userinit(void)
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
+
+  //Ass2-2.1.2  just to be sure
   init_siganls_handlers_to_default(p);
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -249,7 +255,7 @@ userinit(void)
 void init_siganls_handlers_to_default(struct proc *p){ 
 
     for(int i=0;i<NUMOFSIGNALS;i++){
-      p->signalhandlers[i]=SIG_DFL;
+      p->signalhandlers[i]=(void*)SIG_DFL;
     }
 
 }
@@ -329,14 +335,28 @@ fork(void)
 int sigaction(int signum,uint64 act,uint64 oldact){
   struct proc *p = myproc();
 
-  if(act!= 0)
-    {
-      copyin() p
-    }
   if(oldact!=0)
   {
-
+    if(copyout(p->pagetable,oldact,&(p->signalhandlers[signum]),sizeof(struct sigaction))<0)
+      return -1;
   }
+  if(act!=0 )
+  {
+      if(signum == SIGKILL || signum==SIGSTOP) // what about SIGCONT?
+        return -1;  
+      if(copyin(p->pagetable,&(p->signalhandlers[signum]),act,sizeof(struct sigaction))<0)
+        return -1;
+  }
+  return 0;
+}
+int sigprocmask(int newmask)
+{
+    struct proc* p =myproc();
+    
+    
+    int old_mask=p->signalmask;
+    p->signalmask=newmask;
+  return old_mask;
 }
 void
   copy_signal_handlers(  struct proc * np,  struct proc * p){
@@ -603,7 +623,7 @@ wakeup(void *chan)
 // The victim won't exit until it tries to return
 // to user space (see usertrap() in trap.c).
 int
-kill(int pid)
+kill(int pid, int signum)
 {
   struct proc *p;
 

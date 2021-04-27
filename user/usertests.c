@@ -7,7 +7,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
-
+#include "kernel/signal.h"
 //
 // Tests xv6 system calls.  usertests without arguments runs them all
 // and usertests <name> runs <name> test. The test runner creates for
@@ -799,7 +799,7 @@ killstatus(char *s)
       exit(0);
     }
     sleep(1);
-    kill(pid1);
+    kill(pid1,SIGKILL);
     wait(&xst);
     if(xst != -1) {
        printf("%s: status should be -1\n", s);

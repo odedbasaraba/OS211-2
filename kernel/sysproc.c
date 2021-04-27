@@ -16,20 +16,27 @@ sys_exit(void)
   exit(n);
   return 0;  // not reached
 }
+//Ass2-2.1.3
 uint64
 sys_sigprocmask(void)
 {
-  struct proc *p=myproc();
   int new_mask;
   argint(0, &new_mask);
-  uint64 old_mask=p->signalmask;
-  p->signalmask=(uint32)new_mask;
-  return old_mask;
+  return ((uint64)sigprocmask(new_mask));
+ 
 }
 uint64
 sys_sigaction(void)
 {
-  return 0;
+  struct proc *p=myproc();
+  int signalnumber;
+    uint64 act;
+  uint64 oldact;
+
+  if((argint(0, &signalnumber) < 0) || (argaddr(1, &act)<0) ||  (argaddr(2, &oldact)< 0 ))
+    return -1;
+    
+  return sigaction(signalnumber,act,oldact);
 }
 uint64
 sys_sigret(void)
@@ -96,10 +103,10 @@ uint64
 sys_kill(void)
 {
   int pid;
-
-  if(argint(0, &pid) < 0)
+  int signum;
+  if((argint(0, &pid) < 0) ||(argint(0, &pid) < 0))
     return -1;
-  return kill(pid);
+  return kill(pid,signum);
 }
 
 // return how many clock tick interrupts have occurred
