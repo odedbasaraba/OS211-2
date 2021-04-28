@@ -112,6 +112,7 @@ struct proc {
   uint32 signalmask;                  //Represents which signals this process should block generally
   void* signalhandlers[NUMOFSIGNALS];   //Represents signal handler's data
   struct trapframe* user_trap_frame_backup; //Represents user trap frame backup.
+  int freeze;
 
 
 };
