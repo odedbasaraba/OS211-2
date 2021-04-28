@@ -626,15 +626,18 @@ int
 kill(int pid, int signum)
 {
   struct proc *p;
-
+  uint sign=1<<signum;
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
-    if(p->pid == pid){
+     if((p->pid == pid)&&(p->state==ZOMBIE||p->state==UNUSED))
+        return -1;
+    if(p->pid == pid){                          //2.2.1 check if its the right place
       p->killed = 1;
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
       }
+      p->pendingsignals=p->pendingsignals|sign;
       release(&p->lock);
       return 0;
     }
