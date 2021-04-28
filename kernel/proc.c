@@ -332,24 +332,24 @@ fork(void)
 }
 
 
-int sigaction(int signum,uint64 act,uint64 oldact){
+int sigaction_proc(int signum,uint64 act,uint64 oldact){
   struct proc *p = myproc();
 
   if(oldact!=0)
   {
-    if(copyout(p->pagetable,oldact,&(p->signalhandlers[signum]),sizeof(struct sigaction))<0)
+    if(copyout(p->pagetable,oldact,(p->signalhandlers[signum]),sizeof(struct sigaction))<0)
       return -1;
   }
-  if(act!=0 )
+  if(act!=0)
   {
       if(signum == SIGKILL || signum==SIGSTOP) // what about SIGCONT?
         return -1;  
-      if(copyin(p->pagetable,&(p->signalhandlers[signum]),act,sizeof(struct sigaction))<0)
+      if(copyin(p->pagetable,(p->signalhandlers[signum]),act,sizeof(struct sigaction))<0)
         return -1;
   }
   return 0;
 }
-int sigprocmask(int newmask)
+int sigprocmask_proc(int newmask)
 {
     struct proc* p =myproc();
     

@@ -22,13 +22,12 @@ sys_sigprocmask(void)
 {
   int new_mask;
   argint(0, &new_mask);
-  return ((uint64)sigprocmask(new_mask));
+  return ((uint64)sigprocmask_proc(new_mask));
  
 }
 uint64
 sys_sigaction(void)
 {
-  struct proc *p=myproc();
   int signalnumber;
     uint64 act;
   uint64 oldact;
@@ -36,7 +35,7 @@ sys_sigaction(void)
   if((argint(0, &signalnumber) < 0) || (argaddr(1, &act)<0) ||  (argaddr(2, &oldact)< 0 ))
     return -1;
     
-  return sigaction(signalnumber,act,oldact);
+  return sigaction_proc(signalnumber,act,oldact);
 }
 uint64
 sys_sigret(void)
@@ -104,7 +103,7 @@ sys_kill(void)
 {
   int pid;
   int signum;
-  if((argint(0, &pid) < 0) ||(argint(0, &pid) < 0))
+  if((argint(0, &pid) < 0) ||(argint(0, &signum) < 0))
     return -1;
   return kill(pid,signum);
 }

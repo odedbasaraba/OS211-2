@@ -133,7 +133,7 @@ void
 make_dfl_signal(struct proc *thisisp)
 {
    for(int i=0;i<NUMOFSIGNALS;i++){
-      if(thisisp->signalhandlers[i]!=SIG_IGN)
+      if((thisisp->signalhandlers[i])!=(void*)SIG_IGN)
         thisisp->signalhandlers[i]=(void*)SIG_DFL;
     }
 }
