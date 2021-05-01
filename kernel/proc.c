@@ -514,10 +514,7 @@ void scheduler(void)
     for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if(p->freeze)
-        if((p->pendingsignals&(1<<SIGCONT))>0)
-          sigcont_handler();
-      if (p->state == RUNNABLE && !p->freeze)
+      if (p->state == RUNNABLE)
       {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
