@@ -19,8 +19,11 @@ int sigcont_handler()
     if (!p->freeze)
         return -1;
     p->freeze = 0;
-    p->pendingsignals=p->pendingsignals ^ (1<<SIGCONT);
-    return -1;
+    acquire(&p->lock);
+    p->pendingsignals = p->pendingsignals ^ (1 << SIGCONT);
+    release(&p->lock);
+
+    return 0;
 }
 //handle the stop signal and shut down the stop bit that we handled 2.3.0
 
@@ -34,14 +37,18 @@ int sigstop_handler()
         p->freeze = 1;
         for (;;)
         {
-            if (p->freeze)
+            acquire(&p->lock);
+            if (!(p->pendingsignals & 1<<SIGCONT))
             {
+                release(&p->lock);
                 yield();
             }
 
             else
             {
-                p->pendingsignals=p->pendingsignals ^ (1<<SIGSTOP);
+                p->freeze=0;
+                p->pendingsignals = p->pendingsignals ^ (1 << SIGSTOP);
+                release(&p->lock);
                 break;
             }
         }
