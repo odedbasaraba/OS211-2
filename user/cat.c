@@ -21,6 +21,7 @@ cat(int fd)
   }
 }
 
+
 int
 main(int argc, char *argv[])
 {
