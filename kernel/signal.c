@@ -19,10 +19,6 @@ int sigcont_handler()
     if (!p->freeze)
         return -1;
     p->freeze = 0;
-    acquire(&p->lock);
-    p->pendingsignals = p->pendingsignals ^ (1 << SIGCONT);
-    release(&p->lock);
-
     return 0;
 }
 //handle the stop signal and shut down the stop bit that we handled 2.3.0
@@ -48,10 +44,41 @@ int sigstop_handler()
             {
                 p->freeze=0;
                 p->pendingsignals = p->pendingsignals ^ (1 << SIGSTOP);
+                p->pendingsignals = p->pendingsignals ^ (1 << SIGCONT);
                 release(&p->lock);
                 break;
             }
         }
     }
     return 0;
+}
+int
+signal_handler()
+{   
+    struct proc * p=myproc();
+    for (int i = 0; i < NUMOFSIGNALS; i++)
+    {
+        if((p->pendingsignals&1<<i)& !(p->signalmask& 1<<i))
+        {
+            if (p->signalhandlers[i]==(void*)SIG_IGN)
+            continue;
+            else if(p->signalhandlers[i]==(void*)SIG_DFL)
+                sigkill_handler();
+            else if (i==SIGKILL)
+                sigkill_handler();
+            else if (i==SIGCONT)
+                sigcont_handler();
+            else if (i==SIGSTOP)
+                sigstop_handler();
+                else
+                            //backup
+
+            signalhandler_user();
+            return 0;
+        }
+        else{
+            return -1;
+        }
+    }
+    
 }
