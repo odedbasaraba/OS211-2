@@ -1,6 +1,9 @@
 #include "proc.h"
 #include "defs.h"
 
+extern void* sigretBEG(void);
+extern void* sigretEND(void);
+
 int sigkill_handler()
 {
     struct proc *p = myproc();
@@ -53,6 +56,23 @@ int sigstop_handler()
     return 0;
 }
 int
+signalhandler_user(int i)
+{
+    struct proc * p=myproc();
+    p->user_trap_frame_backup=p->trapframe;
+     // Allocate a trapframe page.
+  if ((p->trapframe = (struct trapframe *)kalloc()) == 0)
+  {
+    p->trapframe->ra=sigretBEG;
+    uint64 funcsize= sigretEND - sigretBEG;
+     struct sigaction * tmp_action=(struct sigaction *)p->signalhandlers[i];
+     p->trapframe->epc=tmp_action->sa_handler;
+       
+  }
+
+}
+
+int
 signal_handler()
 {   
     struct proc * p=myproc();
@@ -72,9 +92,7 @@ signal_handler()
                 sigstop_handler();
                 else
                             //backup
-
-            signalhandler_user();
-            return 0;
+            return signalhandler_user(i);
         }
         else{
             return -1;
@@ -82,3 +100,8 @@ signal_handler()
     }
     
 }
+
+
+
+
+
