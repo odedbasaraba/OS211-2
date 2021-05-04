@@ -125,7 +125,14 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
-
+  if ((p->user_trap_frame_backup = (struct trapframe *)kalloc()) == 0)
+  {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+  p->handlingSignal = 0;
+   p->signalmask_origin=0;
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0)
   {
@@ -312,7 +319,7 @@ int fork(void)
     return -1;
   }
   np->sz = p->sz;
-  np->pendingsignals=0;
+  np->pendingsignals = 0;
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -343,6 +350,14 @@ int fork(void)
   return pid;
 }
 
+int sigret_proc(void)
+{
+  struct proc *p = myproc();
+  p->handlingSignal = 0;
+  memmove(p->trapframe, p->user_trap_frame_backup, sizeof(struct trapframe));
+  p->signalmask=p->signalmask_origin;
+  return 0;
+}
 int sigaction_proc(int signum, uint64 act, uint64 oldact)
 {
   struct proc *p = myproc();
@@ -354,7 +369,7 @@ int sigaction_proc(int signum, uint64 act, uint64 oldact)
   }
   if (act != 0)
   {
-    if (signum == SIGKILL || signum == SIGSTOP) // what about SIGCONT?
+    if (signum == SIGKILL || signum == SIGSTOP)
       return -1;
     if (copyin(p->pagetable, (p->signalhandlers[signum]), act, sizeof(struct sigaction)) < 0)
       return -1;

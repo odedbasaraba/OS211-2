@@ -1,4 +1,5 @@
 #include "signal.h"
+#include "types.h"
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -113,6 +114,8 @@ struct proc {
   void* signalhandlers[NUMOFSIGNALS];   //Represents signal handler's data
   struct trapframe* user_trap_frame_backup; //Represents user trap frame backup.
   int freeze;
+  int handlingSignal;                       //we handle only one signal at once
+  uint32 signalmask_origin;   // to save the original mask
 
 
 };
@@ -121,3 +124,10 @@ struct sigaction {
 void (*sa_handler) (int);
 uint sigmask;
 };
+
+int sigkill_handler(void);
+int sigcont_handler(void);
+int sigstop_handler(void);
+void signalhandler_user(int);
+void signal_handler(void);
+

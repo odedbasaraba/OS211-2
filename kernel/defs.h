@@ -1,9 +1,3 @@
-#define SIG_DFL 0 /* default signal handling */
-#define SIG_IGN 1 /* ignore signal */
-#define SIGKILL 9
-#define SIGSTOP 17
-#define SIGCONT 19
-#define NUMOFSIGNALS 32
 
 
 struct buf;
@@ -118,7 +112,7 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             sigprocmask_proc(int);
 int             sigaction_proc(int,uint64,uint64);
-
+int             sigret_proc(void);
 // swtch.S
 void            swtch(struct context*, struct context*);
 

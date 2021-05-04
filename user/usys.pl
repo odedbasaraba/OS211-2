@@ -14,16 +14,7 @@ sub entry {
     print " ecall\n";
     print " ret\n";
 }
-sub entry2 {
-    print ".global sigretBEG\n";
-    print ".global sigretEND\n";
-    print "sigretBEG:\n";
-    print " li a7, SYS_sigret\n";
-    print " ecall\n";
-    print " ret\n";
-    print "sigretEND:\n";
 
-}	
 entry("fork");
 entry("exit");
 entry("wait");
@@ -47,6 +38,6 @@ entry("sleep");
 entry("uptime");
 entry("sigprocmask");
 entry("sigaction");
-entry("sigret");
-entry2();
+ entry("sigret");
+#entry2();
 

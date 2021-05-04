@@ -40,12 +40,13 @@ sys_sigaction(void)
 uint64
 sys_sigret(void)
 {
-  return 0;
+  return sigret_proc();
 }
 uint64
 sys_getpid(void)
 {
   return myproc()->pid;
+
 }
 
 uint64
