@@ -7,7 +7,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
-#include "signal.h"
+#include "kernel/signal.h"
 
 #include "kernel/spinlock.h"  // NEW INCLUDE FOR ASS2
 //#include "Csemaphore.h"   // NEW INCLUDE FOR ASS 2
@@ -49,13 +49,16 @@ void signal_test(char *s){
     struct sigaction old;
 
     sigprocmask(0);
+    printf("here1");
     sigaction(testsig, &act, &old);
     if((pid = fork()) == 0){
         while(!wait_sig)
             sleep(1);
         exit(0);
     }
+    printf("here2");
     kill(pid, testsig);
+    printf("here3");
     wait(&pid);
     printf("Finished testing signals\n");
 }
