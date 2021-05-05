@@ -22,7 +22,7 @@ sys_sigprocmask(void)
 {
   int new_mask;
   argint(0, &new_mask);
-  return ((uint64)sigprocmask_proc(new_mask));
+  return sigprocmask_proc(new_mask);
  
 }
 uint64
@@ -104,7 +104,7 @@ sys_kill(void)
 {
   int pid;
   int signum;
-  if((argint(0, &pid) < 0) ||(argint(0, &signum) < 0))
+  if((argint(0, &pid) < 0) ||(argint(1, &signum) < 0))
     return -1;
   return kill(pid,signum);
 }

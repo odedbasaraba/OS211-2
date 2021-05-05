@@ -125,6 +125,11 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  for (int i = 0; i < NUMOFSIGNALS; i++)
+  {
+    p->signalmasks[i]=0;
+  }
+  
   if ((p->user_trap_frame_backup = (struct trapframe *)kalloc()) == 0)
   {
     freeproc(p);
@@ -156,7 +161,7 @@ found:
 
   //Ass2-2.1.2-1
   init_siganls_handlers_to_default(p);
-
+  p->pendingsignals = 0;
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
@@ -353,34 +358,55 @@ int fork(void)
 int sigret_proc(void)
 {
   struct proc *p = myproc();
+  acquire(&p->lock);
   p->handlingSignal = 0;
   memmove(p->trapframe, p->user_trap_frame_backup, sizeof(struct trapframe));
   p->signalmask=p->signalmask_origin;
+  release(&p->lock);
   return 0;
 }
 int sigaction_proc(int signum, uint64 act, uint64 oldact)
 {
   struct proc *p = myproc();
-
+  if(p==0||signum>33||signum<0)
+  return -1;
+  acquire(&p->lock);
+  struct sigaction tmp_old;
+  struct sigaction tmp_sig;
   if (oldact != 0)
   {
-    if (copyout(p->pagetable, oldact, (p->signalhandlers[signum]), sizeof(struct sigaction)) < 0)
+    tmp_old.sa_handler=p->signalhandlers[signum];
+    tmp_old.sigmask=p->signalmasks[signum];
+    if (copyout(p->pagetable, oldact, (char*)&tmp_old, sizeof(struct sigaction)) < 0)
+    {
+      release(&p->lock);
       return -1;
+    }
   }
+
   if (act != 0)
   {
     if (signum == SIGKILL || signum == SIGSTOP)
-      return -1;
-    if (copyin(p->pagetable, (p->signalhandlers[signum]), act, sizeof(struct sigaction)) < 0)
+     { release(&p->lock);
       return -1;
   }
+    if (copyin(p->pagetable,(char*)&tmp_sig, act, sizeof(struct sigaction)) < 0)
+  { 
+      release(&p->lock);
+      return -1;
+      
+  }
+  p->signalhandlers[signum]=tmp_sig.sa_handler;
+  p->signalmasks[signum]=tmp_sig.sigmask;
+  }
+  release(&p->lock);
   return 0;
 }
 int sigprocmask_proc(int newmask)
 {
   struct proc *p = myproc();
 
-  int old_mask = p->signalmask;
+  uint old_mask = p->signalmask;
   p->signalmask = newmask;
   return old_mask;
 }
@@ -660,15 +686,18 @@ void wakeup(void *chan)
 int kill(int pid, int signum)
 {
   struct proc *p;
-  uint sign = 1 << signum;
+  //uint sign = 1 << signum; dont work with this
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
     if ((p->pid == pid) && (p->state == ZOMBIE || p->state == UNUSED))
+    {
+      release(&p->lock);
       return -1;
+    }
     if (p->pid == pid)
     { //2.2.1 check if its the right place
-      p->pendingsignals = p->pendingsignals | sign;
+      p->pendingsignals = p->pendingsignals | signum;
       release(&p->lock);
       return 0;
     }

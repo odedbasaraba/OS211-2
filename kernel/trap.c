@@ -48,14 +48,13 @@ int sigstop_handler()
         return -1;
     else if (p->state == RUNNABLE || p->state == RUNNING)
     {
+        acquire(&p->lock);
         p->freeze = 1;
+        release(&p->lock);
         for (;;)
         {
-
-            if (p->pendingsignals & (1 << SIGCONT))
-
-                acquire(&p->lock);
-            if (!(p->pendingsignals & 1 << SIGCONT))
+              acquire(&p->lock);
+            if (!(p->pendingsignals & (1 << SIGCONT)))
             {
                 release(&p->lock);
                 yield();
@@ -75,30 +74,34 @@ int sigstop_handler()
 }
 void signalhandler_user(int i)
 {
+
     struct proc *p = myproc();
     struct sigaction tmp_action;
-    copyin(p->pagetable,(void*) (&tmp_action), (uint64)p->signalhandlers[i], sizeof(struct sigaction));
+    acquire(&p->lock);
+    copyin(p->pagetable,(void*) (&tmp_action.sa_handler), (uint64)p->signalhandlers[i], sizeof(void*));
+    copyin(p->pagetable,(void*) (&tmp_action.sigmask), (uint64)p->signalmasks[i], sizeof(uint32));
     p->signalmask_origin = p->signalmask;
     p->signalmask = tmp_action.sigmask;
     p->handlingSignal = 1;
-
-
     uint64 new_sp;
     new_sp = p->trapframe->sp - sizeof(struct trapframe);
+    //p->user_trap_frame_backup=(struct trapframe*)new_sp;
+    //memmove(p->user_trap_frame_backup,p->trapframe,sizeof(struct trapframe));
     //p->user_trap_frame_backup->sp=new_sp;
     copyout(p->pagetable, new_sp,(void*) p->trapframe->sp, sizeof(uint64));
     p->trapframe->epc = (uint64)tmp_action.sa_handler;
     uint64 funcsize = sigretEND - sigretBEG;
     p->trapframe->sp -= funcsize;
-    while(p->trapframe->sp--%4!=0);
     copyout(p->pagetable, p->trapframe->sp, (void *)&sigretBEG, funcsize);
     p->trapframe->a0 = i;
     p->trapframe->ra = p->trapframe->sp;
-    p->pendingsignals = p->pendingsignals ^ (1 << (i - 1)); //i-1 maybe
+    p->pendingsignals = p->pendingsignals ^ (1 << i); //i-1 maybe
+    release(&p->lock);
 }
 
 void signal_handler()
-{
+{   
+
     struct proc *p = myproc();
     if (p->handlingSignal)
         return;
@@ -231,6 +234,7 @@ usertrapret(void)
 {
   struct proc *p = myproc();
  memmove(p->user_trap_frame_backup,p->trapframe,sizeof(struct trapframe)); //copy
+
   // we're about to switch the destination of traps from
   // kerneltrap() to usertrap(), so turn off interrupts until
   // we're back in user space, where usertrap() is correct.

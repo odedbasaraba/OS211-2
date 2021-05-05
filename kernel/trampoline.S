@@ -145,5 +145,5 @@ userret:
 .global sigretEND
 sigretBEG:
     li a7, 24
-ecall
+    ecall
 sigretEND:

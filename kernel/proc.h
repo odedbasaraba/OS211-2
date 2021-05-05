@@ -112,6 +112,7 @@ struct proc {
   char name[16];               // Process name (debugging)
   uint32 signalmask;                  //Represents which signals this process should block generally
   void* signalhandlers[NUMOFSIGNALS];   //Represents signal handler's data
+  uint32 signalmasks[NUMOFSIGNALS];     //signals of the user signals
   struct trapframe* user_trap_frame_backup; //Represents user trap frame backup.
   int freeze;
   int handlingSignal;                       //we handle only one signal at once
