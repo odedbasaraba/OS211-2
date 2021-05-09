@@ -6,6 +6,7 @@ struct file;
 struct inode;
 struct pipe;
 struct proc;
+struct thread; //3.1 thread
 struct spinlock;
 struct sleeplock;
 struct stat;
@@ -113,6 +114,11 @@ void            procdump(void);
 int             sigprocmask_proc(int);
 int             sigaction_proc(int,uint64,uint64);
 int             sigret_proc(void);
+//thread task 3.1-start
+struct thread*  mythread();
+void threadinit(struct proc *p);
+void killthreads(void);
+//thread task 3.1 -end
 // swtch.S
 void            swtch(struct context*, struct context*);
 
