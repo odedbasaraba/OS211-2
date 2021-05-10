@@ -42,6 +42,7 @@ sys_sigret(void)
 {
   return sigret_proc();
 }
+
 uint64
 sys_getpid(void)
 {
@@ -154,4 +155,11 @@ uint64
 sys_kthread_id(void)
 {
   return kthread_id_proc();
+
+}
+//Ass 2 - 4.1
+uint64 
+sys_bsem_alloc(void)
+{
+  return bsem_alloc();
 }

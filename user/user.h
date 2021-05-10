@@ -28,6 +28,7 @@ int getpid(void);
 char *sbrk(int);
 int sleep(int);
 int uptime(void);
+
 int sigprocmask(int);
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 void sigret(void);
@@ -36,6 +37,12 @@ int kthread_create(void (*start_func)(), void *stack);
 int kthread_id(void);
 void kthread_exit(int status);
 int kthread_join(int thread_id, int *status);
+int sigaction (int signum, const struct sigaction *act, struct sigaction *oldact);
+void sigret (void);
+int bsem_alloc(void);
+void bsem_free(int);
+void bsem_down(int);
+void bsem_up(int);
 
 // ulib.c
 int stat(const char *, struct stat *);

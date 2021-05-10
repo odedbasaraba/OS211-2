@@ -138,7 +138,6 @@ struct proc {
   int handlingSignal;                       //we handle only one signal at once
   uint32 signalmask_origin;   // to save the original mask
 
-
 };
 
 struct sigaction {

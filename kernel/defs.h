@@ -114,6 +114,16 @@ void            procdump(void);
 int             sigprocmask_proc(int);
 int             sigaction_proc(int,uint64,uint64);
 int             sigret_proc(void);
+
+//Ass2  4.1
+//binarySemaphore.c
+void            initsems(void);
+int             bsm_alloc(void);
+void            bsm_free(int);
+void            bsm_down(int);
+void            bsm_up(int);
+
+
 //thread task 3.1-start
 struct thread*  mythread();
 void threadinit(struct proc *p);
