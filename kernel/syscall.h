@@ -29,5 +29,5 @@
 #define SYS_kthread_join      28
 #define SYS_bsem_alloc        29
 #define SYS_bsem_free         30
-#define SYS_bsem_bsem_down    31
+#define SYS_bsem_down         31
 #define SYS_bsem_up           32

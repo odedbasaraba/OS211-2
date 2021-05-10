@@ -6,6 +6,22 @@
 #include "proc.h"
 #include "defs.h"
 #include "signal.h"
+#define MAX_BSEM 128
+#define NUM_OF_THREADS 20
+struct spinlock;
+
+struct binarySemaphore
+{
+    int value;  //locked -> value==1 , otherwise 0 
+    struct spinlock lock; // used in order to lock it
+    struct thread* threads[NUM_OF_THREADS];
+    struct thread* currentThread;
+    int descriptor;     // Sem-id
+    
+
+};
+struct  binarySemaphore Bsems[MAX_BSEM];
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -357,6 +373,24 @@ void userinit(void)
   t->state = t_RUNNABLE;
   release(&p->lock);
 }
+
+
+// ASS 2 4.1
+
+
+void initsems(void){
+    for(int i=0;i<MAX_BSEM;i++){
+   { 
+        initlock(&Bsems[i].lock,"BsemLock");
+        acquire(&Bsems[i].lock);
+        Bsems[i].descriptor=-1; // unusedBsem
+        Bsems[i].value=1;
+        release(&Bsems[i].lock);
+   }
+}
+}
+
+// END
 void init_siganls_handlers_to_default(struct proc *p)
 {
 
@@ -1021,4 +1055,94 @@ int kthread_id_proc(void)
   if (tid)
     return tid;
   return -1;
+}
+
+void 
+remove_current_thread(struct thread* threads[]){
+    struct thread* this_thread= mythread();
+    for(int i=0;i<NUM_OF_THREADS;i++){
+        if(threads[i]==this_thread){
+           threads[i]=0;
+           return;
+        }
+    }
+}
+void place_thread_in_line(struct thread* threads[])
+{
+    struct thread* this_thread= mythread();
+    for(int i=0;i<NUM_OF_THREADS;i++){
+        if(threads[i]==0){
+           threads[i]=this_thread;
+           return;
+        }
+    }
+    panic("No More space for threads in Bsem");
+
+}
+int bsem_alloc(void){
+
+    int descriptor=-1;
+    for(int i=0;i<MAX_BSEM;i++){
+        acquire(&Bsems[i].lock);
+        if(Bsems[i].value==-1){
+            Bsems[i].value=1;
+            Bsems[i].descriptor=i;
+            descriptor=i;
+        }
+        release(&Bsems[i].lock);
+        break;
+    }
+       return descriptor;
+}
+
+void 
+bsem_free(int descriptor){
+        acquire(&Bsems[descriptor].lock);
+        if(Bsems[descriptor].descriptor==-1 || Bsems[descriptor].value==0)// not even used || in use right now
+        {
+            release(&Bsems[descriptor].lock);
+            return;
+        }
+        
+        Bsems[descriptor].descriptor=-1; // unusedBsem
+        release(&Bsems[descriptor].lock);
+}
+void 
+bsem_down(int descriptor){
+    for(;;){
+        acquire(&Bsems[descriptor].lock);
+            if(Bsems[descriptor].descriptor==-1)// not even used
+            {
+            release(&Bsems[descriptor].lock);
+                return;
+            }
+        
+        if(Bsems[descriptor].value==1)
+        {
+            Bsems[descriptor].currentThread=mythread();
+            remove_current_thread(Bsems[descriptor].threads);
+            Bsems[descriptor].value=0;
+            release(&Bsems[descriptor].lock);
+            break;
+        }
+        else{ 
+            place_thread_in_line(Bsems[descriptor].threads);
+            sleep(&Bsems[descriptor],&Bsems[descriptor].lock);
+        }
+}
+}
+
+
+void 
+bsem_up(int descriptor){
+        acquire(&Bsems[descriptor].lock);
+        if(Bsems[descriptor].descriptor==-1){
+            release(&Bsems[descriptor].lock);
+            return;
+
+        }
+        Bsems[descriptor].currentThread=0;
+        Bsems[descriptor].value=1;    
+        wakeup(&Bsems[descriptor]);
+        release(&Bsems[descriptor].lock);
 }

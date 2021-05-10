@@ -149,7 +149,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_kthread_join]    sys_kthread_join,
 [SYS_bsem_alloc] sys_bsem_alloc,
 [SYS_bsem_free] sys_bsem_free,
-[SYS_bsem_bsem_down] sys_bsem_down,
+[SYS_bsem_down] sys_bsem_down,
 [SYS_bsem_up] sys_bsem_up,
 };
 

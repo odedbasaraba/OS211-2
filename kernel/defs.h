@@ -118,10 +118,10 @@ int             sigret_proc(void);
 //Ass2  4.1
 //binarySemaphore.c
 void            initsems(void);
-int             bsm_alloc(void);
-void            bsm_free(int);
-void            bsm_down(int);
-void            bsm_up(int);
+int             bsem_alloc(void);
+void            bsem_free(int);
+void            bsem_down(int);
+void            bsem_up(int);
 
 
 //thread task 3.1-start
