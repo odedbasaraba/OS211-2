@@ -6,6 +6,7 @@ struct file;
 struct inode;
 struct pipe;
 struct proc;
+struct thread; //3.1 thread
 struct spinlock;
 struct sleeplock;
 struct stat;
@@ -122,6 +123,12 @@ void            bsm_free(int);
 void            bsm_down(int);
 void            bsm_up(int);
 
+
+//thread task 3.1-start
+struct thread*  mythread();
+void threadinit(struct proc *p);
+void killthreads(void);
+//thread task 3.1 -end
 // swtch.S
 void            swtch(struct context*, struct context*);
 
