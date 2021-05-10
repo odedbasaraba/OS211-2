@@ -24,7 +24,6 @@ int bsem_alloc(void){
         if(Bsems[i].value==-1){
             Bsems[i].value=1;
             Bsems[i].descriptor=i;
-            Bsems[i].try_to_delete=0;
             descriptor=i;
         }
         release(&Bsems[i].lock);
@@ -32,34 +31,25 @@ int bsem_alloc(void){
     }
        return descriptor;
 }
+
 void 
 bsem_free(int descriptor){
-    int descriptor=-1;
         accquire(&Bsems[descriptor].lock);
-        if(Bsems[descriptor].descriptor==-1 || Bsems[descriptor].try_to_delete==1 || Bsems[descriptor].value==0)// not even used
+        if(Bsems[descriptor].descriptor==-1 || Bsems[descriptor].value==0)// not even used || in use right now
         {
             release(&Bsems[descriptor].lock);
             return;
         }
         
-       if(someone_sleeps_on(descriptor)){
-           return;
-       }
-
-       accquire(&Bsems[descriptor].lock);
         Bsems[descriptor].descriptor=-1; // unusedBsem
-        Bsems[descriptor].try_to_delete=0;
         release(&Bsems[descriptor].lock);
 }
 void 
 bsem_down(int descriptor){
     struct proc *p = myproc();
-
-    accquire(&p->lock);
-            p->sleeps_on=descriptor;
     for(;;){
         accquire(&Bsems[descriptor].lock);
-            if(Bsems[descriptor].descriptor==-1 || Bsems[descriptor].try_to_delete==1)// not even used
+            if(Bsems[descriptor].descriptor==-1)// not even used
             {
             release(&Bsems[descriptor].lock);
                 return;
@@ -67,32 +57,49 @@ bsem_down(int descriptor){
         
         if(Bsems[descriptor].value==1)
         {
+            Bsems[descriptor].currentThread=mythread();
+            remove_current_thread(Bsems[descriptor].threads);
             Bsems[descriptor].value=0;
             release(&Bsems[descriptor].lock);
-
             break;
         }
         else 
-            accquire(&p->lock);
-            p->sleeps_on=descriptor;
-            p->state=SLEEPING;
-            release(&p->lock);
-            release(&Bsems[descriptor].lock);
-            yield();
+            place_thread_in_line(Bsems[descriptor].threads);
+            sleep(&Bsems[descriptor],&Bsems[descriptor].lock);
         }
 }
 void 
-bsem_up(int descriptor){
-    int descriptor=-1;
-    for(int i=0;i<MAX_BSEM;i++){
-        accquire(&Bsems[i].lock);
-        if(Bsems[i].value==-1){
-            Bsems[i].value=1;
-            Bsems[i].descriptor=i;
-            descriptor=i;
+remove_current_thread(struct thread* threads[]){
+    struct thread* this_thread= mythread();
+    for(int i=0;i<NUM_OF_THREADS;i++){
+        if(threads[i]==this_thread){
+           threads[i]=0;
+           return;
         }
-        release(&Bsems[i].lock);
-        break;
     }
-       return descriptor;
+}
+void place_thread_in_line(struct thread* threads[])
+{
+    struct thread* this_thread= mythread();
+    for(int i=0;i<NUM_OF_THREADS;i++){
+        if(threads[i]==0){
+           threads[i]=this_thread;
+           return;
+        }
+    }
+    panic("No More space for threads in Bsem");
+
+}
+void 
+bsem_up(int descriptor){
+        accquire(&Bsems[descriptor].lock);
+        if(Bsems[descriptor].descriptor==-1){
+            release(&Bsems[descriptor].lock);
+            return;
+
+        }
+        Bsems[descriptor].currentThread=0;
+        Bsems[descriptor].value=1;    
+        wakeup(&Bsems[descriptor]);
+        release(&Bsems[descriptor].lock);
 }

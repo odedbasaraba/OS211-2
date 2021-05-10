@@ -116,7 +116,6 @@ struct proc {
   int pid;                     // Process ID
   //Ass2 
   uint32 pendingsignals;        //Represents which signals this process should be handled
-  int sleeps_on; // = descriptor of binarySemaphore the proccess sleeps on
 
 
   // proc_tree_lock must be held when using this:
