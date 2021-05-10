@@ -42,6 +42,7 @@ sys_sigret(void)
 {
   return sigret_proc();
 }
+
 uint64
 sys_getpid(void)
 {
@@ -120,4 +121,11 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+//Ass 2 - 4.1
+uint64 
+sys_bsem_alloc(void)
+{
+  return bsem_alloc();
 }
