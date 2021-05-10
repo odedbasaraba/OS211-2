@@ -1013,6 +1013,7 @@ reparent(char *s)
 {
   int master_pid = getpid();
   for(int i = 0; i < 200; i++){
+   
     int pid = fork();
     if(pid < 0){
       printf("%s: fork failed\n", s);
@@ -2911,7 +2912,7 @@ main(int argc, char *argv[])
     {badarg, "badarg" },// 200 ticks
     {reparent, "reparent" },
     {twochildren, "twochildren"},
-    {forkfork, "forkfork"},
+     {forkfork, "forkfork"},
     {forkforkfork, "forkforkfork"},
     {argptest, "argptest"},// 1 ticks
 //    {createdelete, "createdelete"},// 200 ticks

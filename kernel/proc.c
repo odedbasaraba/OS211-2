@@ -170,7 +170,6 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->killed = 0;
-  acquire(&t->lock);
   t->state = t_USED;
   t->killed = 0;
   t->tid = get_tid();
@@ -182,7 +181,6 @@ found:
   if ((tf = (struct trapframe *)kalloc()) == 0)
   {
     free_thread(t);
-    release(&t->lock);
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -193,7 +191,6 @@ found:
   if (p->pagetable == 0)
   {
     free_thread(t);
-    release(&t->lock);
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -206,6 +203,7 @@ found:
   }
   if ((p->user_trap_frame_backup = (struct trapframe *)kalloc()) == 0)
   {
+     free_thread(t);
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -356,7 +354,6 @@ void userinit(void)
 
   // p->state = RUNNABLE;
   t->state = t_RUNNABLE;
-  release(&t->lock);
   release(&p->lock);
 }
 void init_siganls_handlers_to_default(struct proc *p)
@@ -443,7 +440,8 @@ int fork(void)
   // acquire(&np->thread_tbl[0].lock);
   // np->state = RUNNABLE;
   np->thread_tbl[0].state = t_RUNNABLE;
-  release(&np->thread_tbl[0].lock);
+  np->state=USED;
+  // release(&np->thread_tbl[0].lock);
   release(&np->lock);
 
   return pid;
@@ -542,7 +540,7 @@ void exit(int status)
 
   // Close all open files.
   killthreads(); //need to kill all other threads
-  acquire(&p->lock);
+
   for (int fd = 0; fd < NOFILE; fd++)
   {
     if (p->ofile[fd])
@@ -557,29 +555,25 @@ void exit(int status)
   iput(p->cwd);
   end_op();
   p->cwd = 0;
-
-  if (holding(&p->lock))
-    release(&p->lock);
-
-  if (!holding(&wait_lock))
-    acquire(&wait_lock);
+  acquire(&wait_lock);
+  // if (holding(&p->lock))
+  //   release(&p->lock);
 
   // Give any children to init.
   reparent(p);
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-  //acquire(&p->lock);
+  acquire(&p->lock);
 
-  acquire(&t->lock);
   t->state = TZOMBIE;
   p->xstate = status;
   p->state = ZOMBIE;
   t->xstate = status;
   release(&wait_lock);
 
-  // Jump into the scheduler, never to return.
 
+  // Jump into the scheduler, never to return.
   // release(&p->lock);
   sched();
   panic("zombie exit");
@@ -702,6 +696,7 @@ void scheduler(void)
 
     for (p = proc; p < &proc[NPROC]; p++)
     {
+      acquire(&p->lock);
       if (p->state == USED)
       {
         // Switch to chosen process.  It is the process's job
@@ -711,7 +706,6 @@ void scheduler(void)
         for (int i = 0; i < NTHREAD; i++)
         {
           t = &p->thread_tbl[i];
-          acquire(&t->lock);
           if (t->state == t_RUNNABLE)
           {
             t->state = t_RUNNING;
@@ -719,12 +713,12 @@ void scheduler(void)
             swtch(&c->context, &t->context);
             c->thread = 0;
           }
-          release(&t->lock);
           // Process is done running for now.
           // It should have changed its p->state before coming back.
         }
         c->proc = 0;
       }
+      release(&p->lock);
     }
   }
 }
@@ -739,10 +733,10 @@ void sched(void)
 {
   int intena;
   struct thread *t = mythread();
-
-  if (!holding(&t->lock))
+ struct proc *p = myproc();
+  if (!holding(&p->lock))
     panic("sched p->lock");
-  if (mycpu()->noff != 1)
+  if (mycpu()->noff != 1 && mycpu()->noff != 2)
     panic("sched locks");
   if (t->state == t_RUNNING)
     panic("sched running");
@@ -758,11 +752,11 @@ void sched(void)
 void yield(void)
 {
   struct thread *t = mythread();
-
-  acquire(&t->lock);
+  struct proc *p = myproc();
+  acquire(&p->lock);
   t->state = t_RUNNABLE;
   sched();
-  release(&t->lock);
+  release(&p->lock);
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -772,7 +766,7 @@ void forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
-  release(&mythread()->lock);
+  release(&myproc()->lock);
 
   if (first)
   {
@@ -791,7 +785,7 @@ void forkret(void)
 void sleep(void *chan, struct spinlock *lk)
 {
   struct thread *t = mythread();
-
+  struct proc *p =myproc();
   // Must acquire p->lock in order to
   // change p->state and then call sched.
   // Once we hold p->lock, we can be
@@ -799,7 +793,7 @@ void sleep(void *chan, struct spinlock *lk)
   // (wakeup locks p->lock),
   // so it's okay to release lk.
 
-  acquire(&t->lock); //DOC: sleeplock1
+  acquire(&p->lock); //DOC: sleeplock1
   release(lk);
 
   // Go to sleep.
@@ -812,7 +806,7 @@ void sleep(void *chan, struct spinlock *lk)
   t->chan = 0;
 
   // Reacquire original lock.
-  release(&t->lock);
+  release(&p->lock);
   acquire(lk);
 }
 
@@ -824,17 +818,17 @@ void wakeup(void *chan)
   struct thread *t;
   for (p = proc; p < &proc[NPROC]; p++)
   {
-
+    acquire(&p->lock);
     for (int i = 0; i < NTHREAD; i++)
     {
       t=&p->thread_tbl[i];
-      acquire(&t->lock);
+      
       if (t->state == t_SLEEPING && t->chan == chan)
       {
         t->state = t_RUNNABLE;
       }
-      release(&t->lock);
     }
+  release(&p->lock);
   }
 }
 
