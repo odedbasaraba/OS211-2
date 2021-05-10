@@ -2,6 +2,7 @@
 #include "types.h"
 // Saved registers for kernel context switches.
 #define NTHREAD  8
+#define MAX_STACK_SIZE 4000
 struct context {
   uint64 ra;
   uint64 sp;

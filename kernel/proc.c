@@ -173,6 +173,7 @@ found:
   t->state = t_USED;
   t->killed = 0;
   t->tid = get_tid();
+  t->tparent=p;
   for (int i = 0; i < NUMOFSIGNALS; i++)
   {
     p->signalmasks[i] = 0;
@@ -203,7 +204,7 @@ found:
   }
   if ((p->user_trap_frame_backup = (struct trapframe *)kalloc()) == 0)
   {
-     free_thread(t);
+    free_thread(t);
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -440,7 +441,7 @@ int fork(void)
   // acquire(&np->thread_tbl[0].lock);
   // np->state = RUNNABLE;
   np->thread_tbl[0].state = t_RUNNABLE;
-  np->state=USED;
+  np->state = USED;
   // release(&np->thread_tbl[0].lock);
   release(&np->lock);
 
@@ -571,7 +572,6 @@ void exit(int status)
   p->state = ZOMBIE;
   t->xstate = status;
   release(&wait_lock);
-
 
   // Jump into the scheduler, never to return.
   // release(&p->lock);
@@ -733,7 +733,7 @@ void sched(void)
 {
   int intena;
   struct thread *t = mythread();
- struct proc *p = myproc();
+  struct proc *p = myproc();
   if (!holding(&p->lock))
     panic("sched p->lock");
   if (mycpu()->noff != 1 && mycpu()->noff != 2)
@@ -785,7 +785,7 @@ void forkret(void)
 void sleep(void *chan, struct spinlock *lk)
 {
   struct thread *t = mythread();
-  struct proc *p =myproc();
+  struct proc *p = myproc();
   // Must acquire p->lock in order to
   // change p->state and then call sched.
   // Once we hold p->lock, we can be
@@ -821,14 +821,14 @@ void wakeup(void *chan)
     acquire(&p->lock);
     for (int i = 0; i < NTHREAD; i++)
     {
-      t=&p->thread_tbl[i];
-      
+      t = &p->thread_tbl[i];
+
       if (t->state == t_SLEEPING && t->chan == chan)
       {
         t->state = t_RUNNABLE;
       }
     }
-  release(&p->lock);
+    release(&p->lock);
   }
 }
 
@@ -857,6 +857,71 @@ int kill(int pid, int signum)
   }
   return -1;
 }
+void kthread_exit_proc(int status)
+{
+  struct thread *curr_t = mythread();
+  struct proc *p = curr_t->tparent;
+  struct thread *t;
+  int num_of_threads = 0;
+
+  acquire(&p->lock);
+  for (int i = 0; i < NTHREAD; i++)
+  {
+    t = &p->thread_tbl[i];
+    if (t->tid != curr_t->tid)
+      if ((t->state == t_SLEEPING) || (t->state == t_RUNNABLE) || (t->state == t_RUNNING) || (t->state == t_UNUSED))
+        num_of_threads = 1;
+  }
+  release(&p->lock);
+  if (num_of_threads)
+  {
+    acquire(&wait_lock);
+    wakeup(curr_t);
+    acquire(&p->lock);
+    curr_t->state = TZOMBIE;
+    release(&wait_lock);
+    sched();
+    panic("zombie exit");
+  }
+  else
+  {
+    exit(status);
+  }
+}
+int kthread_join_proc(int tthread_id, int * status)
+{
+
+  struct proc *p = myproc();
+  struct thread *t;
+  if (tthread_id == mythread()->tid || tthread_id > nexttid || tthread_id < 1)
+    return -1;
+  acquire(&wait_lock);
+  acquire(&p->lock);
+  for (int i =0; i < NTHREAD; i++)
+  {
+    t = &p->thread_tbl[i];
+    if (t->tid == tthread_id)
+      break;
+  }
+  while (t->tid == tthread_id && t->state != TZOMBIE)
+  {
+    release(&p->lock);
+    sleep(t, &wait_lock);
+    acquire(&p->lock);
+  }
+  if (status != 0 && copyout(p->pagetable, (uint64)status, (char *)&t->xstate,
+                             sizeof(t->xstate)) < 0)
+  {
+    release(&p->lock);
+    release(&wait_lock);
+    return -1;
+  }
+  free_thread(t);
+  release(&wait_lock);
+  release(&p->lock);
+  return 0;
+}
+
 
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
@@ -918,4 +983,42 @@ void procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+int kthread_create_proc(void (*start_func)(), void *stack)
+{
+  struct proc *p = myproc();
+  struct thread *t;
+  acquire(&p->lock);
+  for (int i = 0; i < NTHREAD; i++)
+  {
+    t = &p->thread_tbl[i];
+    if (t->state == t_UNUSED)
+    {
+      t->state = t_RUNNABLE;
+      t->tid = get_tid();
+      t->trapframe->epc = (uint64)start_func;
+      t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE - 16;
+      memset(&t->context, 0, sizeof(t->context));
+      t->context.ra = (uint64)forkret;
+      t->context.sp = t->kstack + PGSIZE;
+      t->tparent = p;
+      release(&p->lock);
+      return t->tid;
+    }
+  }
+  release(&p->lock);
+  return -1;
+}
+int kthread_id_proc(void)
+{
+  struct thread *t = mythread();
+  int tid;
+
+  acquire(&t->tparent->lock);
+  tid = t->tid;
+  release(&t->tparent->lock);
+
+  if (tid)
+    return tid;
+  return -1;
 }

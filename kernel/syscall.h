@@ -23,4 +23,7 @@
 #define SYS_sigprocmask       22
 #define SYS_sigaction         23
 #define SYS_sigret            24
-
+#define SYS_kthread_exit      25
+#define SYS_kthread_create    26
+#define SYS_kthread_id        27
+#define SYS_kthread_join      28

@@ -121,3 +121,37 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_kthread_exit(void)
+{
+  int status;
+  if (argint(0, &status) < 0)
+    return -1;
+  kthread_exit_proc(status);
+  return 0;
+}
+uint64 
+sys_kthread_join(void)
+{
+  int id;
+  uint64 status;
+  if((argint(0, &id) < 0) ||(argaddr(1, &status) < 0))
+    return -1;
+  return kthread_join_proc(id,(int *)status);
+
+}
+uint64 
+sys_kthread_create(void)
+{
+  uint64 start_func;
+  uint64 stack;
+  if((argaddr(0, &start_func) < 0) ||(argaddr(1, &stack) < 0))
+    return -1;
+  return kthread_create_proc((void *)start_func,(void *)stack);
+}
+uint64
+sys_kthread_id(void)
+{
+  return kthread_id_proc();
+}

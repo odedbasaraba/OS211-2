@@ -118,6 +118,11 @@ int             sigret_proc(void);
 struct thread*  mythread();
 void threadinit(struct proc *p);
 void killthreads(void);
+void kthread_exit_proc(int);
+int kthread_create_proc(void (*start_func)(), void *stack);
+int kthread_id_proc(void);
+int kthread_join_proc(int, int * );
+
 //thread task 3.1 -end
 // swtch.S
 void            swtch(struct context*, struct context*);
